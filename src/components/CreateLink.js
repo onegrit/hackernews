@@ -45,7 +45,13 @@ class CreateLink extends Component {
                     />
                 </div>
                 {/* 2. 使用Mutation组件封装Submit按钮 */}
-                <Mutation mutation={POST_MUTATION} variables={{ description, url }}>
+                <Mutation
+                    mutation={POST_MUTATION}
+                    variables={{ description, url }}
+                    // implement an automatic redirect from the CreateLink component to the LinkList component 
+                    // after a mutation was performed 提交后自动重定向到列表页面
+                    onCompleted={() => this.props.history.push('/')}
+                >
                     {
                         (postMutation) => (
                             <button onClick={postMutation}>Submit</button>

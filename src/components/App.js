@@ -2,14 +2,19 @@ import React from 'react';
 import '../styles/App.css';
 import LinkList from './LinkList';
 import CreateLink from './CreateLink';
+import Header from './Header';
+import { Switch, Route } from 'react-router';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <CreateLink />
-        {/* <LinkList /> */}
-      </header>
+    <div className="center w85">
+      <Header />
+      <div className="ph3 pv1 background-gray">
+        <Switch>
+          <Route exact="/" component={LinkList} />
+          <Route exact="/create" component={CreateLink} />
+        </Switch>
+      </div>
     </div>
   );
 }
