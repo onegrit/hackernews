@@ -2,10 +2,6 @@ scalar DateTime
 
 type Query {
   info: String!
-  """
-  Retrieves all links from the backend, note that this query also allows for filter, sorting and pagination arguments
-  从后端检索所有链接，注意：这是一个允许过滤、排序、和分页的Query
-  """
   feed(filter: String, skip: Int, first: Int, orderBy: LinkOrderByInput): Feed!
 }
 
@@ -24,33 +20,14 @@ type Feed {
 }
 
 type Mutation {
-  """
-  Allows authenticated users to create a new link
-  """
   post(url: String!, description: String!): Link!
-  """
-  Create an account for a new user
-  """
   signup(email: String!, password: String!, name: String!): AuthPayload
-  """
-  Login an existing user
-  """
   login(email: String!, password: String!): AuthPayload
-  """
-  Allows authenticated users to vote for an existing link
-  """
   vote(linkId: ID!): Vote!
 }
 
 type Subscription {
-  """
-  Receive realtime updates when a new link is created
-  当新建一个Link时，接收到实时更新
-  """
   newLink: Link
-  """
-  Receive realtime updates when a vote was submitted
-  """
   newVote: Vote
 }
 
