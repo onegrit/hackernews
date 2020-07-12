@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import { Link } from 'react-router-dom'
 import { withRouter } from 'react-router'
-import {AUTH_TOKEN} from '../constants'
+import { AUTH_TOKEN } from '../constants'
 
 
 /**
@@ -21,6 +21,8 @@ class Header extends Component {
                 <div className="flex felx-fixed black">
                     <div className="fw7 mr1">Hacker News</div>
                     <Link to="/" className="ml1 no-underline black" >New</Link>
+                    <div className="ml1">|</div>
+                    <Link to="/top" className="ml1 no-underline black">Top</Link>
                     <div className="ml1">|</div>
                     <Link to="/search" className="ml1 no-underline black">Search</Link>
                     {

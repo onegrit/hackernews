@@ -1,8 +1,8 @@
-import React, { Component } from 'react'
+import React, { Component, Fragment } from 'react'
 import Link from './Link'
 import { gql } from 'apollo-boost'
 import { Query } from 'react-apollo'
-
+import { LINKS_PER_PAGE } from '../constants'
 
 /**
  * 常规捕获后台数据逻辑
@@ -12,23 +12,26 @@ import { Query } from 'react-apollo'
  */
 //1. write the query as a JavaScript constant using the `gql` parser function
 export const FEED_QUERY = gql`
-    {
-        feed{
-            links{
-                id
-                createdAt
-                url
-                description
-                postedBy{
+    query FeedQuery($first:Int,$skip:Int,$orderBy:LinkOrderByInput){
+        {
+            feed(first:$first,skip:$skip,orderBy:$orderBy){
+                links{
                     id
-                    name
-                }
-                votes{
-                    id
-                    user{
+                    createdAt
+                    url
+                    description
+                    postedBy{
                         id
+                        name
+                    }
+                    votes{
+                        id
+                        user{
+                            id
+                        }
                     }
                 }
+                count
             }
         }
     }
@@ -93,7 +96,16 @@ class LinkList extends Component {
      * @param {*} linkId 
      */
     _updateCacheAfterVote = (store, createVote, linkId) => {
-        const data = store.readQuery({ query: FEED_QUERY })
+        const isNewPage = this.props.location.pathname.includes('new')
+        const page = parseInt(this.props.match.params.page, 10)
+
+        const skip = isNewPage ? (page - 1) * LINKS_PER_PAGE : 0
+        const first = isNewPage ? LINKS_PER_PAGE : 100
+        const orderBy = isNewPage ? 'createdAt_DESC' : null
+        const data = store.readQuery({
+            query: FEED_QUERY,
+            variables: { first, skip, orderBy }
+        })
         const votedLink = data.feed.links.find(link => link.id === linkId)
         votedLink.votes = createVote.link.votes
 
@@ -125,27 +137,46 @@ class LinkList extends Component {
             document: NEW_VOTES_SUBSCRIPTION
         })
     }
+
+    _getQueryVariables = () => {
+        const isNewPage = this.props.location.pathname.includes('new')
+        const page = parseInt(this.props.match.params.page, 10)
+
+        const skip = isNewPage ? (page - 1) * LINKS_PER_PAGE : 0
+        const first = isNewPage ? LINKS_PER_PAGE : 100
+        const orderBy = isNewPage ? 'createdAt_DESC' : null
+
+        return { first, skip, orderBy }
+
+    }
+    // 根据投票数排序链接：返回top 10
+    _getLinksToRender = data => {
+        const isNewPage = this.props.location.pathname.includes('new')
+        if (isNewPage) {
+            return data.feed.links
+        }
+        const rankedLinks = data.feed.links.slice()
+        rankedLinks.sort((l1, l2) => l2.votes.length - l1.votes.length)
+        return rankedLinks
+    }
+    _nextPage = data => {
+        const page = parseInt(this.props.match.params.page, 10)
+        if (page <= data.feed.count / LINKS_PER_PAGE) {
+            const nextPage = page + 1
+            this.props.history.push(`/new/${nextPage}`)
+        }
+    }
+    _previousPage = () => {
+        const page = parseInt(this.props.match.params.page, 10)
+        if (page > 1) {
+            const previousPage = page - 1
+            this.props.history.push(`/new/${previousPage}`)
+        }
+    }
     render() {
-        const linksToRender = [
-            {
-                id: '1',
-                description: 'Prisma turns your database into a GraphQL API 😎',
-                url: 'https://www.prismagraphql.com',
-            },
-            {
-                id: '2',
-                description: 'The best GraphQL client',
-                url: 'https://www.apollographql.com/docs/react/',
-            },
-            {
-                id: '3',
-                description: 'Very good movies website',
-                url: 'https://www.youbube.com',
-            },
-        ]
         return (
             // 2. use the `<Query />` component passing the GraphQL query as prop
-            <Query query={FEED_QUERY}>
+            <Query query={FEED_QUERY} variables={this._getQueryVariables()}>
                 {/* 
                     3. access the query results that gets injected into the component’s `render prop function`
                 */}
@@ -153,23 +184,36 @@ class LinkList extends Component {
                     ({ loading, error, data, subscribeToMore }) => { // subscribeToMore:Subscription Feature
                         if (loading) return <div>Fetching...</div>
                         if (error) return <div>Error</div>
-                        
+
                         //Subscription Feature
-                        this._subscribeToNewLinks(subscribeToMore) 
+                        this._subscribeToNewLinks(subscribeToMore)
                         this._subscribeToNewVotes(subscribeToMore)
 
                         const linksToRender = data.feed.links
+                        const isNewPage = this.props.location.pathname.includes('new')
+                        const pageIndex = this.props.match.params.page
+                            ? (this.props.match.params.page - 1) * LINKS_PER_PAGE
+                            : 0
 
                         return (
-                            <div>
+                            <Fragment>
                                 {linksToRender.map((link, index) =>
                                     <Link
                                         key={link.id}
                                         link={link}
-                                        index={index}
-                                        updateCacheAfterVote={this._updateCacheAfterVote}
+                                        index={index + pageIndex}
+                                        updateStoreAfterVote={this._updateCacheAfterVote}
                                     />)}
-                            </div>
+                                {isNewPage && (
+                                    <div className="flex ml4 mv3 gray">
+                                        <div className="pointer mr2" onClick={() => this._previousPage}>
+                                            Previous
+                                            </div>
+                                        <div className="pointer" onClick={() => this._nextPage(data)}>Next</div>
+                                    </div>
+                                )}
+                            </Fragment>
+
                         )
                     }
 
