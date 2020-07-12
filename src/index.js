@@ -11,6 +11,11 @@ import { InMemoryCache } from 'apollo-cache-inmemory'
 import { BrowserRouter } from 'react-router-dom';
 import { AUTH_TOKEN } from './constants';
 import { setContext } from 'apollo-link-context';
+// Subscription Feature
+import { split } from 'apollo-link'
+import { WebSocketLink } from 'apollo-link-ws'
+import { getMainDefinition } from 'apollo-utilities'
+
 
 /**
  * 2. Here you create the httpLink that will connect your ApolloClient instance with the GraphQL API, 
@@ -30,12 +35,35 @@ const authLink = setContext((_, { headers }) => {
     }
   }
 })
+// Subscription Feature->
+const wsLink = new WebSocketLink({
+  uri: `ws://localhost:4000`,
+  options: {
+    reconnect: true,
+    connectionParams: {
+      authToken: localStorage.getItem(AUTH_TOKEN)
+    }
+  }
+})
+// split()中间件用于路由特定的请求，第一个参数是test函数，返回Boolean;如果True，则将请求转发到wsLink，否则作为
+//常规的http请求处理
+const link = split(
+  ({ query }) => {
+    const { kind, operation } = getMainDefinition(query)
+    return kind === 'OperationDefinition' && operation === 'subscription'
+  },
+  wsLink,
+  authLink.concat(httpLink)
+)
+
+
+// <- Subscription Feature
 
 /**
  * 3. Now you instantiate ApolloClient by passing in the httpLink and a new instance of an InMemoryCache.
  */
 const client = new ApolloClient({
-  link: authLink.concat(httpLink), //这样每次ApolloClient发送请求时都会调用setContext这个中间件了
+  link,
   cache: new InMemoryCache()
 })
 
