@@ -11,7 +11,7 @@ import { Query } from 'react-apollo'
  * 3. 1. access the query results that gets injected into the component’s `render prop function`
  */
 //1. write the query as a JavaScript constant using the `gql` parser function
-const FEED_QUERY = gql`
+export const FEED_QUERY = gql`
     {
         feed{
             links{
@@ -19,6 +19,16 @@ const FEED_QUERY = gql`
                 createdAt
                 url
                 description
+                postedBy{
+                    id
+                    name
+                }
+                votes{
+                    id
+                    user{
+                        id
+                    }
+                }
             }
         }
     }
@@ -26,6 +36,23 @@ const FEED_QUERY = gql`
 `
 
 class LinkList extends Component {
+    /**
+     * You start by reading the current state of the cached data for the FEED_QUERY from the store.
+        Now you’re retrieving the link that the user just voted for from that list. You’re also manipulating that link 
+        by resetting its votes to the votes that were just returned by the server.
+        Finally, you take the modified data and write it back into the store.
+     * @param {*} store 
+     * @param {*} createVote 
+     * @param {*} linkId 
+     */
+    _updateCacheAfterVote = (store, createVote, linkId) => {
+        const data = store.readQuery({ query: FEED_QUERY })
+        const votedLink = data.feed.links.find(link => link.id === linkId)
+        votedLink.votes = createVote.link.votes
+
+        store.writeQuery({ query: FEED_QUERY, data })
+    }
+
     render() {
         const linksToRender = [
             {
@@ -50,20 +77,26 @@ class LinkList extends Component {
                 {/* 
                     3. access the query results that gets injected into the component’s `render prop function`
                 */}
-                { 
-                    ({loading,error,data}) => {
+                {
+                    ({ loading, error, data }) => {
                         if (loading) return <div>Fetching...</div>
                         if (error) return <div>Error</div>
 
                         const linksToRender = data.feed.links
-                        
-                        return(
+
+                        return (
                             <div>
-                                {linksToRender.map(link => <Link key={link.id} link={link}/>)}
+                                {linksToRender.map((link, index) =>
+                                    <Link
+                                        key={link.id}
+                                        link={link}
+                                        index={index}
+                                        updateCacheAfterVote={this._updateCacheAfterVote}
+                                    />)}
                             </div>
                         )
                     }
-                    
+
                 }
             </Query>
         )

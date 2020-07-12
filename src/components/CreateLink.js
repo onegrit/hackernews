@@ -1,7 +1,7 @@
 import React, { Component } from 'react'
 import { gql } from 'apollo-boost'
 import { Mutation } from 'react-apollo'
-
+import {FEED_QUERY} from './LinkList'
 /**
  * 
  * 1.First you need to define the mutation in your JavaScript code and wrap your component 
@@ -48,6 +48,14 @@ class CreateLink extends Component {
                 <Mutation
                     mutation={POST_MUTATION}
                     variables={{ description, url }}
+                    update={(store, { data: { post } }) => {
+                        const data = store.readQuery({ query: FEED_QUERY })
+                        data.feed.links.unshift(post)
+                        store.writeQuery({
+                            query: FEED_QUERY,
+                            data
+                        })
+                    }}
                     // implement an automatic redirect from the CreateLink component to the LinkList component 
                     // after a mutation was performed 提交后自动重定向到列表页面
                     onCompleted={() => this.props.history.push('/')}
